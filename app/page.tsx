@@ -19,7 +19,8 @@ type MoistureSensor = {
 
 type PressureSensor = {
   ready?: boolean;
-  value?: number;
+  value?: number; // calibrated kPa (data-transfer-calibrated sketch) or raw ADC count (uncalibrated sketch)
+  raw?: number;
 };
 
 type DeviceData = {
@@ -134,6 +135,10 @@ const RISK_LABELS: Record<RiskLevel, string> = {
   watch: "Watch",
   critical: "Leak Risk",
 };
+
+function connectionBadgeClass(connected: boolean): string {
+  return `${BADGE_CLASS} bg-white rounded-md border-2 ${connected ? "border-green-600" : "border-black"}`;
+}
 
 function formatNumber(value: number | undefined): string {
   return typeof value === "number" ? value.toFixed(1) : "—";
@@ -479,15 +484,15 @@ export default function Home() {
   }, [appView, toggleSimulation, stepSimulatedPh]);
 
   return (
-    <div className="flex flex-col flex-1 bg-white text-black">
-      <header className="px-6 py-4 flex items-center justify-between" style={bevel("#e4e4e7", false, 2)}>
+    <div className="flex flex-col flex-1 min-h-0 bg-white text-black">
+      <header className="shrink-0 px-6 py-4 flex items-center justify-between" style={bevel("#e4e4e7", false, 2)}>
         <div className="flex items-center gap-3">
           <AppViewSwitcher value={appView} onChange={setAppView} />
           {appView === "pipes" && (
             <button
               type="button"
               onClick={() => setView((prev) => (prev === "sensors" ? "calculations" : "sensors"))}
-              className={buttonClass(view === "calculations", "px-3 py-1 text-sm uppercase rounded-lg")}
+              className={buttonClass(false, "px-3 py-1 text-sm uppercase rounded-lg")}
             >
               {view === "sensors" ? "View Calculations" : "View Sensors"}
             </button>
@@ -496,10 +501,10 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {appView === "pipes" ? (
             <>
-              <span className={BADGE_CLASS} style={bevel("#ffffff", true)}>
+              <span className={connectionBadgeClass(connected)}>
                 Sensors: {connected ? "Connected" : "Disconnected"}
               </span>
-              <span className={BADGE_CLASS} style={bevel("#ffffff", true)}>
+              <span className={connectionBadgeClass(predictionsConnected)}>
                 Predictions: {predictionsConnected ? "Connected" : "Disconnected"}
               </span>
               {view === "sensors" && (
@@ -514,13 +519,13 @@ export default function Home() {
             </>
           ) : (
             <>
-              <span className={BADGE_CLASS} style={bevel("#ffffff", true)}>
+              <span className={connectionBadgeClass(filtrationConnected)}>
                 Sensors: {filtrationConnected ? "Connected" : "Disconnected"}
               </span>
               <button
                 type="button"
                 onClick={() => setFiltrationShowDiagram((prev) => !prev)}
-                className={buttonClass(filtrationShowDiagram, "px-3 py-1 text-sm uppercase rounded-lg")}
+                className={buttonClass(false, "px-3 py-1 text-sm uppercase rounded-lg")}
               >
                 {filtrationShowDiagram ? "View Data" : "View Diagram"}
               </button>
@@ -538,7 +543,7 @@ export default function Home() {
 
       {appView === "filtration" && typeof filtration.ph.value === "number" && isPhBad(filtration.ph.value) && (
         <div
-          className="px-6 py-2 text-center text-sm font-mono font-bold uppercase text-white"
+          className="shrink-0 px-6 py-2 text-center text-sm font-mono font-bold uppercase text-white"
           style={bevel("#dc2626", true, 2)}
         >
           Filtration System Error - Irregular pH
@@ -556,9 +561,9 @@ export default function Home() {
       ) : view === "calculations" ? (
         <CalculationsView predictions={predictions} />
       ) : showModel ? (
-        <main className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+        <main className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
           <ModelViewer />
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 min-h-0 overflow-y-auto">
             {DEVICE_IDS.map((deviceId) => (
               <DevicePanel
                 key={deviceId}
@@ -571,7 +576,7 @@ export default function Home() {
           </div>
         </main>
       ) : (
-        <main className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+        <main className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
           {DEVICE_IDS.map((deviceId) => (
             <DevicePanel
               key={deviceId}
@@ -612,7 +617,7 @@ function DevicePanel({
   const worstLevel: RiskLevel = worst ? worst.level : "unknown";
 
   return (
-    <section className="flex flex-col rounded-xl overflow-hidden bg-zinc-400 border border-t-2 border-x-0 border-t-zinc-300 border-x-zinc-500 border-b-zinc-600 shadow shadow-black/20">
+    <section className="flex flex-col rounded-xl overflow-hidden bg-zinc-400 border border-t-2 border-x-0 border-t-zinc-300 border-x-zinc-500 border-b-zinc-600 shadow shadow-black/20 ring-1 ring-zinc-900">
       <div
         className="px-4 py-3 flex items-center justify-between gap-2 text-white bg-gradient-to-tr from-zinc-800/90 to-zinc-900/50 border-b border-b-zinc-700/80"
       >
@@ -672,7 +677,7 @@ function PositionCard({
         <span className="text-xs font-bold uppercase shrink-0 w-16 text-center">{position}</span>
         <div className="grid grid-cols-2 gap-2 flex-1">
           <div className="text-white bg-black px-2 py-1 rounded-md border border-x-0 border-t-zinc-800 border-b-zinc-400">
-            <div className="text-[10px] font-bold uppercase text-red-500">Pressure</div>
+            <div className="text-[10px] font-bold uppercase text-red-500">Pressure (kPa)</div>
             <div className="font-mono text-sm">
               {pressure ? (pressure.ready ? formatNumber(pressure.value) : "Not Ready") : "—"}
             </div>
@@ -731,13 +736,16 @@ function isPhBad(value: number): boolean {
   return value < 6 || value > 8;
 }
 
-function PhGauge({ ph }: { ph: FiltrationPh }) {
+function PhGauge({ ph, boxed = false }: { ph: FiltrationPh; boxed?: boolean }) {
   const hasValue = typeof ph.value === "number";
   const clamped = hasValue ? Math.min(14, Math.max(0, ph.value as number)) : 7;
   const bad = hasValue && isPhBad(ph.value as number);
+  const borderClass = boxed
+    ? `rounded-lg border-1 ${bad ? "border-red-600" : "border-black"}`
+    : `border-y ${bad ? "border-y-red-600" : "border-y-black"}`;
 
   return (
-    <div className={`p-3 flex flex-col gap-1.5 border-y ${bad ? "border-y-red-600" : "border-y-black"}`}>
+    <div className={`p-5 flex flex-col gap-1.5 ${borderClass}`}>
       <div className="flex items-end justify-between">
         <div>
           <div className="text-[10px] font-bold uppercase text-gray-500">pH Level</div>
@@ -809,19 +817,20 @@ function DeviceStatusBadge({
   offLabel: string;
 }) {
   return (
-    <div className="flex flex-col" style={bevel("#ffffff", false)}>
-      <div className="px-3 py-2 text-white" style={bevel("#111111", false)}>
-        <span className="text-xs font-bold uppercase">{label}</span>
+    <section className="flex flex-col rounded-xl overflow-hidden bg-zinc-400 border border-t-2 border-x-0 border-t-zinc-300 border-x-zinc-500 border-b-zinc-600 shadow shadow-black/20">
+      <div className="px-4 py-3 flex items-center justify-between gap-2 text-white bg-gradient-to-tr from-zinc-800/90 to-zinc-900/50 border-b border-b-zinc-700/80">
+        <h2 className="font-bold uppercase">{label}</h2>
       </div>
-      <div
-        className={`px-3 py-4 text-center text-xl font-mono font-bold uppercase ${
-          active ? "text-white" : "text-black"
-        }`}
-        style={bevel(active ? "#111111" : "#ffffff", active)}
-      >
-        {active ? onLabel : offLabel}
+      <div className="p-3">
+        <div
+          className={`px-3 py-4 text-center text-xl font-mono font-bold uppercase rounded-md border border-x-0 ${
+            active ? "text-white bg-black border-t-zinc-600 border-b-zinc-300" : "text-black bg-white border-t-zinc-600 border-b-zinc-300"
+          }`}
+        >
+          {active ? onLabel : offLabel}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -984,7 +993,7 @@ function FiltrationDataPanel({
   return (
     <div className={`flex-1 grid grid-cols-1 ${stacked ? "" : "md:grid-cols-3"} gap-6`}>
       <div className={stacked ? "flex flex-col gap-6" : "md:col-span-2 flex flex-col gap-6"}>
-        <PhGauge ph={state.ph} />
+        <PhGauge ph={state.ph} boxed />
         <div className="text-xs font-mono uppercase text-gray-500">
           {connected
             ? secondsAgo !== null
@@ -1021,15 +1030,17 @@ function FiltrationView({
   showDiagram: boolean;
 }) {
   return (
-    <main className="flex-1 flex flex-col p-6 gap-6">
+    <main className="flex-1 min-h-0 flex flex-col p-6 gap-6">
       {showModel ? (
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-6">
           <ModelViewer />
-          {showDiagram ? (
-            <FiltrationDiagram state={state} />
-          ) : (
-            <FiltrationDataPanel state={state} connected={connected} now={now} stacked />
-          )}
+          <div className="min-h-0 overflow-y-auto">
+            {showDiagram ? (
+              <FiltrationDiagram state={state} />
+            ) : (
+              <FiltrationDataPanel state={state} connected={connected} now={now} stacked />
+            )}
+          </div>
         </div>
       ) : showDiagram ? (
         <FiltrationDiagram state={state} />
@@ -1125,7 +1136,7 @@ function Stage({
       <div className="relative flex-1 flex items-center gap-1">
         <div className={`flex items-center gap-1 ${showInfo ? "invisible" : ""}`}>{children}</div>
         {showInfo && (
-          <div className="absolute inset-0 p-1 overflow-y-auto" style={bevel("#ffffff", true, 1)}>
+          <div className="absolute inset-0 p-1 overflow-y-auto rounded border border-black bg-white">
             <p className="text-[15px] leading-tight">{explanation}</p>
           </div>
         )}
@@ -1158,10 +1169,10 @@ function RegionCalculation({
   const trace = prediction?.trace;
 
   return (
-    <div style={bevel("#ffffff", false)}>
+    <div className="rounded-md border border-black overflow-hidden">
       <div
-        className="px-3 py-2 flex items-center justify-between text-white"
-        style={bevel("#111111", false)}
+        className="px-3 py-2 bg-black flex items-center justify-between text-white"
+        //style={bevel("#111111", false)}
       >
         <span className="font-bold uppercase text-sm">{position}</span>
         <span className={`text-xs font-mono uppercase px-2 py-1 ${RISK_TEXT[level]}`} style={riskBevel(level)}>
