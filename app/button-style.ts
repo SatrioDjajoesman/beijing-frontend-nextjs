@@ -3,7 +3,7 @@
 // turn blue; everything else stays the neutral zinc/white glass look.
 const BUTTON_BASE =
   "overflow-hidden backdrop-blur-sm border-1 border-l-0 border-r-0" +
-  "font-light " +
+  "font-light cursor-pointer font-mono"
   "before:absolute before:inset-0 before:translate-x-[-100%] hover:before:translate-x-[100%] " +
   "before:transition-transform before:duration-1000 before:ease-in-out cursor-pointer";
 

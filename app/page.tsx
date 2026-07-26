@@ -304,7 +304,7 @@ function AppViewSwitcher({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 top-full mt-1 z-20 flex flex-col overflow-hidden rounded-lg border border-x-0 border-t-zinc-400 border-b-zinc-600 bg-black/20 backdrop-blur-sm shadow-lg shadow-black/40 min-w-full"
+          className="absolute left-0 top-full mt-1 bg-white/50 gap-1 p-1 z-20 flex flex-col overflow-hidden rounded-xl border border-zinc-500 backdrop-blur-sm shadow-lg shadow-black/40 min-w-full"
         >
           {APP_VIEW_OPTIONS.map((option) => (
             <button
@@ -316,9 +316,10 @@ function AppViewSwitcher({
                 onChange(option.value);
                 setOpen(false);
               }}
-              className={`px-3 py-2 text-sm cursor-pointer uppercase text-left whitespace-nowrap transition-colors duration-150 ${
-                option.value === value ? "text-blue-500 bg-white/10" : "text-white/90 hover:bg-white/10"
-              }`}
+              className={buttonClass(
+                option.value === value,
+                "w-full px-3 py-1 text-sm uppercase text-left whitespace-nowrap rounded-lg"
+              )}
             >
               {option.label}
             </button>
@@ -563,7 +564,7 @@ export default function Home() {
       ) : showModel ? (
         <main className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
           <ModelViewer />
-          <div className="flex flex-col gap-6 min-h-0 overflow-y-auto">
+          <div className="flex flex-col gap-6 min-h-0 overflow-y-auto p-2">
             {DEVICE_IDS.map((deviceId) => (
               <DevicePanel
                 key={deviceId}
@@ -817,7 +818,7 @@ function DeviceStatusBadge({
   offLabel: string;
 }) {
   return (
-    <section className="flex flex-col rounded-xl overflow-hidden bg-zinc-400 border border-t-2 border-x-0 border-t-zinc-300 border-x-zinc-500 border-b-zinc-600 shadow shadow-black/20">
+    <section className="flex flex-col rounded-xl overflow-hidden bg-zinc-400 border border-t-2 border-x-0 border-t-zinc-300 border-x-zinc-500 border-b-zinc-600 shadow shadow-black/20 ring-1 ring-zinc-900">
       <div className="px-4 py-3 flex items-center justify-between gap-2 text-white bg-gradient-to-tr from-zinc-800/90 to-zinc-900/50 border-b border-b-zinc-700/80">
         <h2 className="font-bold uppercase">{label}</h2>
       </div>
@@ -991,10 +992,10 @@ function FiltrationDataPanel({
   const secondsAgo = updatedAt ? Math.floor((now - updatedAt) / 1000) : null;
 
   return (
-    <div className={`flex-1 grid grid-cols-1 ${stacked ? "" : "md:grid-cols-3"} gap-6`}>
+    <div className={`flex-1 grid grid-cols-1 ${stacked ? "" : "md:grid-cols-3"} gap-6 p-2`}>
       <div className={stacked ? "flex flex-col gap-6" : "md:col-span-2 flex flex-col gap-6"}>
         <PhGauge ph={state.ph} boxed />
-        <div className="text-xs font-mono uppercase text-gray-500">
+        <div className="text-xs text-center font-mono uppercase text-gray-500">
           {connected
             ? secondsAgo !== null
               ? `Last pH reading ${secondsAgo}s ago`
