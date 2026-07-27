@@ -87,7 +87,7 @@ export default function ModelViewer() {
   );
 
   return (
-    <div className="p-2 bg-zinc-400 rounded-2xl border border-t-2 border-x-0 border-t-zinc-300 border-x-zinc-500 border-b-zinc-600 shadow shadow-black/20">
+    <div className="p-2 bg-zinc-400 rounded-2xl border border-t-2 border-x-0 border-t-zinc-300 border-x-zinc-500 border-b-zinc-600 shadow shadow-black/20 ring-1 ring-zinc-900">
     <div className="relative border border-b-2 border-x-0 border-b-zinc-300 border-t-zinc-500 bg-black h-[75vh] rounded-xl overflow-hidden">
       <button
         type="button"

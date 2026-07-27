@@ -26,12 +26,12 @@ export function buttonToneClass(active: boolean): string {
   return active
     ? "bg-gradient-to-t from-blue-600/80 to-blue-800/60 border border-b-blue-800/90 border-t-blue-300/80 border-x-0 text-white " +
         "ring-1 ring-blue-800 " +
-        "after:content-[''] after:absolute after:inset-0 after:-z-10 after:bg-gradient-to-t after:from-blue-500/70 after:to-blue-800/70 " +
+        "after:content-[''] after:absolute after:inset-0 after:-z-10 after:bg-gradient-to-t after:from-blue-500/70 after:to-blue-800/70 " + //use the reverse (after:from-blue-800/70 after:to-blue-500/70) for a different effect (looks like pop out)
         "after:opacity-0 hover:after:opacity-100 after:transition-opacity after:duration-150 after:ease-in-out " +
         "hover:border-b-blue-900/50 hover:border-t-blue-300/100 transition-colors duration-150 ease-in-out"
     : "bg-gradient-to-t from-zinc-600/90 to-zinc-800/50 border border-b-zinc-800/90 border-t-zinc-300/80 border-x-0 text-white " +
         "ring-1 ring-zinc-700 " +
-        "after:content-[''] after:absolute after:inset-0 after:-z-10 after:bg-gradient-to-t after:from-zinc-600/60 after:to-zinc-300/20 " +
+        "after:content-[''] after:absolute after:inset-0 after:-z-10 after:bg-gradient-to-t after:from-zinc-300/20 after:to-zinc-700/80 " + //use the reverse (after:from-zinc-700/80 after:to-zinc-300/20) for a different effect (looks like pop out)
         "after:opacity-0 hover:after:opacity-100 after:transition-opacity after:duration-150 after:ease-in-out " +
         "hover:border-b-zinc-900/50 hover:border-t-zinc-200/80 transition-colors duration-150 ease-in-out";
 }
