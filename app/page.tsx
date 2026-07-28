@@ -42,9 +42,9 @@ type DeviceState = {
 const SAMPLE_DEVICES: Record<string, DeviceData> = {
   "esp32-1": {
     pressure: {
-      start: { ready: true, value: 40 },
-      middle: { ready: true, value: 101 },
-      end: { ready: true, value: 185 },
+      start: { ready: true, value: 0 },
+      middle: { ready: true, value: 25 },
+      end: { ready: true, value: 50 },
     },
     moisture: {
       start: { raw: 3400, status: "Dry" },
@@ -54,9 +54,9 @@ const SAMPLE_DEVICES: Record<string, DeviceData> = {
   },
   "esp32-2": {
     pressure: {
-      start: { ready: true, value: 185 },
-      middle: { ready: true, value: 185 },
-      end: { ready: true, value: 185 },
+      start: { ready: true, value: 50 },
+      middle: { ready: true, value: 50 },
+      end: { ready: true, value: 50 },
     },
     moisture: {
       start: { raw: 3400, status: "Dry" },
@@ -66,9 +66,9 @@ const SAMPLE_DEVICES: Record<string, DeviceData> = {
   },
   "esp32-3": {
     pressure: {
-      start: { ready: true, value: 185 },
-      middle: { ready: true, value: 101 },
-      end: { ready: true, value: 40 },
+      start: { ready: true, value: 50 },
+      middle: { ready: true, value: 25 },
+      end: { ready: true, value: 0 },
     },
     moisture: {
       start: { raw: 3400, status: "Dry" },
@@ -194,13 +194,15 @@ function formatNumber(value: number | undefined): string {
 // per-pipe and whole-structure views (see PipesDiagramView below).
 // ---------------------------------------------------------------------------
 
-// Matches the HX710B/MPS20N0040D calibration range in
-// data-transfer-calibrated: 40 kPa reads as low/leak-risk, 101 kPa is
-// standard atmospheric (the steady-state "dry" baseline), 185 kPa is the
-// high-pressure ceiling.
-const PRESSURE_MIN_KPA = 40;
-const PRESSURE_MID_KPA = 101;
-const PRESSURE_MAX_KPA = 185;
+// The HX710B/MPS20N0040D in data-transfer-calibrated is a 0-40 kPa gauge
+// sensor (see its calibration comment), tared to ~0 kPa with no
+// differential pressure and reading higher under normal system pressure —
+// so low/leak-risk is near 0 kPa, not near the sensor's ceiling. 50 kPa
+// gives a little headroom above that 40 kPa ceiling so a healthy reading
+// doesn't sit pinned at the very top of the gauge.
+const PRESSURE_MIN_KPA = 0;
+const PRESSURE_MID_KPA = 20;
+const PRESSURE_MAX_KPA = 40;
 
 // Matches DRY_THRESHOLD/WET_THRESHOLD in data-transfer-calibrated — the
 // capacitive moisture sensor reads LOWER when wetter.
@@ -599,16 +601,20 @@ export default function Home() {
 
   // Same keybinds as container_final.py's terminal controls (t/l/k), plus
   // 'r' for full-prod-final.py's pipe simulation toggle — no need to touch
-  // the terminal at all now.
+  // the terminal at all now. 'r' is global (works regardless of which view
+  // is active); t/l/k stay scoped to the Filtration View since they'd be
+  // meaningless (and could fire by accident) anywhere else.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
+      if (key === "r") {
+        togglePipeSimulation();
+        return;
+      }
       if (appView === "filtration") {
         if (key === "t") toggleSimulation();
         else if (key === "l") stepSimulatedPh(true);
         else if (key === "k") stepSimulatedPh(false);
-      } else if (appView === "pipes") {
-        if (key === "r") togglePipeSimulation();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -772,16 +778,16 @@ export default function Home() {
         </main>
       )}
 
-      {appView === "filtration" && filtration.simulated && (
+      {filtration.simulated && (
         <div
           className="fixed bottom-4 right-4 w-3 h-3 rounded-full bg-green-500"
-          title="Simulation mode is ON"
+          title="Filtration simulation mode is ON"
         />
       )}
 
-      {appView === "pipes" && pipeSimulated && (
+      {pipeSimulated && (
         <div
-          className="fixed bottom-4 right-4 w-3 h-3 rounded-full bg-green-500"
+          className="fixed bottom-4 left-4 w-3 h-3 rounded-full bg-green-500"
           title="Pipe simulation mode is ON (press R to toggle)"
         />
       )}
@@ -1850,7 +1856,7 @@ function RegionCalculation({
   const trace = prediction?.trace;
 
   return (
-    <div className="rounded-md border border-black overflow-hidden">
+    <div className="shrink-0 rounded-md border border-black overflow-hidden">
       <div
         className="px-3 py-2 bg-black flex items-center justify-between text-white"
         //style={bevel("#111111", false)}
