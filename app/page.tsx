@@ -26,6 +26,7 @@ type PressureSensor = {
 type DeviceData = {
   moisture?: Record<string, MoistureSensor>;
   pressure?: Record<string, PressureSensor>;
+  simulated?: boolean;
 };
 
 type DeviceState = {
@@ -488,7 +489,7 @@ export default function Home() {
     return () => clearInterval(tick);
   }, []);
 
-  const { connected } = useReconnectingSocket(
+  const { connected, send: sendPipeCommand } = useReconnectingSocket(
     () =>
       process.env.NEXT_PUBLIC_WS_URL ??
       `ws://${window.location.hostname}:8080`,
@@ -590,19 +591,29 @@ export default function Home() {
     [sendFiltrationCommand]
   );
 
-  // Same keybinds as container_final.py's terminal controls (t/l/k) — no
-  // need to touch the terminal at all now.
+  const togglePipeSimulation = useCallback(() => {
+    sendPipeCommand({ type: "command", command: "PIPE_SIM_TOGGLE" });
+  }, [sendPipeCommand]);
+
+  const pipeSimulated = DEVICE_IDS.some((id) => devices[id]?.data.simulated);
+
+  // Same keybinds as container_final.py's terminal controls (t/l/k), plus
+  // 'r' for full-prod-final.py's pipe simulation toggle — no need to touch
+  // the terminal at all now.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (appView !== "filtration") return;
       const key = event.key.toLowerCase();
-      if (key === "t") toggleSimulation();
-      else if (key === "l") stepSimulatedPh(true);
-      else if (key === "k") stepSimulatedPh(false);
+      if (appView === "filtration") {
+        if (key === "t") toggleSimulation();
+        else if (key === "l") stepSimulatedPh(true);
+        else if (key === "k") stepSimulatedPh(false);
+      } else if (appView === "pipes") {
+        if (key === "r") togglePipeSimulation();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [appView, toggleSimulation, stepSimulatedPh]);
+  }, [appView, toggleSimulation, stepSimulatedPh, togglePipeSimulation]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-white text-black">
@@ -761,10 +772,17 @@ export default function Home() {
         </main>
       )}
 
-      {filtration.simulated && (
+      {appView === "filtration" && filtration.simulated && (
         <div
           className="fixed bottom-4 right-4 w-3 h-3 rounded-full bg-green-500"
           title="Simulation mode is ON"
+        />
+      )}
+
+      {appView === "pipes" && pipeSimulated && (
+        <div
+          className="fixed bottom-4 right-4 w-3 h-3 rounded-full bg-green-500"
+          title="Pipe simulation mode is ON (press R to toggle)"
         />
       )}
     </div>
